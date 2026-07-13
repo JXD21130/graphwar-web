@@ -3,18 +3,13 @@
 <head>
   <meta charset="utf-8">
   <title>Graphwar</title>
-  <script src="https://cjrtnc.leaningtech.com/3.0/loader.js"></script>
-  <style>
-    body { margin: 0; background: black; }
-    #display { width: 100vw; height: 100vh; }
-  </style>
+  <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
 </head>
 <body>
-  <div id="display"></div>
   <script>
     (async () => {
       await cheerpjInit();
-      cheerpjCreateDisplay(-1, -1, document.getElementById("display"));
+      cheerpjCreateDisplay(800, 600);
       await cheerpjRunJar("/app/graphwar.jar");
     })();
   </script>
