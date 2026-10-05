@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphWar Web</title>
+  <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #game { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script type="module">
+    await cheerpjInit();
+    cheerpjCreateDisplay(-1, -1, document.getElementById("game"));
+    await cheerpjRunJar("/app/graphwar-web/graphwar-web.jar");
+  </script>
+</body>
+</html>
