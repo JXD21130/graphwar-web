@@ -31,7 +31,9 @@ import java.util.concurrent.TimeUnit;
 public class Connection
 {
 	private static final String LOCAL_CLOSE = "\u0000GRAPHWAR_LOCAL_CLOSE";
-	private Socket socket;
+	private Socket socket;          // null cuando se usa el transporte WebSocket
+	private int wsId = -1;
+	private String wsHost = null;
 	private PrintWriter out;
 	private BufferedReader in;
 	private LinkedBlockingQueue<String> localIncoming;
@@ -43,6 +45,27 @@ public class Connection
 	
 	public Connection(String ip, int port) throws IOException
 	{
+		if(WebTransport.enabled() && !WebTransport.isLocal(ip))
+		{
+    		// Version web: TCP no existe en el navegador, se pasa por el proxy WebSocket
+   	 		String url = WebTransport.baseUrl() + "/?host=" + java.net.URLEncoder.encode(ip, "UTF-8") + "&port=" + port;
+
+    		wsId = WebTransport.open(url);
+			
+    		if(wsId < 0)
+    		{
+        		throw new IOException("Could not connect to " + ip + ":" + port + " through the WebSocket proxy");
+    		}
+
+    		wsHost = ip;
+    		out = new PrintWriter(new WebTransport.Out(wsId), true);
+    		in = new BufferedReader(new InputStreamReader(new WebTransport.In(wsId, Constants.TIMEOUT_KEEPALIVE)));
+
+    		lastReceivedTime = System.currentTimeMillis();
+    		lastSentTime = System.currentTimeMillis();
+
+    		return;
+		}
 		local = false;		
 		SocketAddress sockaddr = new InetSocketAddress(ip, port);
 		socket = new Socket();
@@ -90,13 +113,24 @@ public class Connection
 		out.close();
 		in.close();
 		
-		socket.close();
+		if(socket != null)
+		{
+    		socket.close();
+		}
+		else if(wsId >= 0)
+		{
+    		WebTransport.close(wsId);
+		}
 	}
 	
 	public String getIpAddress()
 	{
-		if(local) return "127.0.0.1";
-		return socket.getInetAddress().getHostAddress();
+    	if(local) return "127.0.0.1";
+    	if(socket == null)
+    	{
+        	return wsHost;
+    	}
+    	return socket.getInetAddress().getHostAddress();
 	}
 	
 	public long getLastSentTime()
