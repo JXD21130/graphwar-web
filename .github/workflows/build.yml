@@ -11,7 +11,7 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar Java
+      - name: Instalar Java 8
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -21,3 +21,12 @@ jobs:
         run: |
           chmod +x compile.sh
           ./compile.sh
+
+      - name: Guardar JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphwar-jars
+          path: |
+            graphwar.jar
+            roomServer.jar
+            globalServer.jar
