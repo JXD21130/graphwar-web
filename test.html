@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba del proxy</title>
+<style>
+body { font-family: sans-serif; max-width: 640px; margin: 24px auto; padding: 0 12px; }
+pre { background: #f3f3f3; padding: 12px; white-space: pre-wrap; border-radius: 6px; }
+#res { font-weight: bold; padding: 12px; border-radius: 6px; margin-top: 12px; }
+.ok { background: #d6f5d6; } .mal { background: #fbd5d5; }
+button { font-size: 16px; padding: 8px 16px; }
+</style>
+</head>
+<body>
+<h2>Prueba del proxy de Graphwar</h2>
+<button id="go">Probar de nuevo</button>
+<pre id="log"></pre>
+<div id="res"></div>
+<script>
+const PROXY = "graphwar-proxy.onrender.com";
+const logEl = document.getElementById("log"), resEl = document.getElementById("res");
+const t0 = () => ((Date.now() - start) / 1000).toFixed(1) + "s";
+let start = 0;
+const log = (m) => { logEl.textContent += "[" + t0() + "] " + m + "\n"; };
+const fin = (ok, m) => { resEl.className = ok ? "ok" : "mal"; resEl.textContent = m; };
+
+async function run() {
+  logEl.textContent = ""; resEl.textContent = ""; resEl.className = ""; start = Date.now();
+
+  log("1) Despertando el proxy (puede tardar hasta 1 minuto)...");
+  try {
+    const ctl = new AbortController();
+    const tm = setTimeout(() => ctl.abort(), 90000);
+    await fetch("https://" + PROXY + "/healthz", { mode: "no-cors", signal: ctl.signal, cache: "no-store" });
+    clearTimeout(tm);
+    log("   proxy alcanzable");
+  } catch (e) {
+    log("   FALLO: " + e);
+    return fin(false, "RESULTADO: el proxy no responde. Mira en Render si el servicio esta en 'Live' y abre /healthz en otra pestana.");
+  }
+
+  log("2) Conectando por WebSocket con el servidor oficial de Graphwar...");
+  const lines = [];
+  const result = await new Promise((resolve) => {
+    let opened = false;
+    let ws;
+    try { ws = new WebSocket("wss://" + PROXY + "/?host=www.graphwar.com&port=23761"); }
+    catch (e) { return resolve("error:" + e); }
+    const giveUp = setTimeout(() => { try { ws.close(); } catch (e) {} resolve("timeout"); }, 40000);
+    ws.onopen = () => {
+      opened = true;
+      log("   WebSocket abierto, el proxy conecto con graphwar.com");
+      ws.send(encodeURIComponent("PruebaWeb"));
+      setTimeout(() => { clearTimeout(giveUp); try { ws.close(); } catch (e) {} resolve("ok"); }, 6000);
+    };
+    ws.onmessage = (ev) => { lines.push(String(ev.data)); log("   recibido: " + ev.data); };
+    ws.onclose = (ev) => { if (!opened) { clearTimeout(giveUp); log("   cerrado antes de abrir (codigo " + ev.code + ")"); resolve("cerrado"); } };
+    ws.onerror = () => log("   error de WebSocket");
+  });
+
+  if (result === "ok" && lines.length > 0) {
+    fin(true, "RESULTADO: TODO BIEN con el proxy y el servidor oficial. Si el juego sigue fallando, el problema esta en el jar (probablemente es el viejo) o en el index.html.");
+  } else if (result === "ok") {
+    fin(false, "RESULTADO: conecta pero el servidor oficial no contesto. Copia este texto y pasamelo.");
+  } else {
+    fin(false, "RESULTADO: el proxy responde pero NO consigue conectar con www.graphwar.com:23761 (" + result + "). Copia este texto y pasamelo; lo siguiente es mirar los logs de Render.");
+  }
+}
+document.getElementById("go").onclick = run;
+run();
+</script>
+</body>
+</html>
