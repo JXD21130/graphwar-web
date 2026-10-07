@@ -27,7 +27,7 @@ async function Java_GraphServer_WebTransport_open(lib, url) {
     const id = nextId++;
     const c = { ws, queue: [], waiter: null, closed: false };
     const wake = () => { if (c.waiter) { const w = c.waiter; c.waiter = null; w(); } };
-    const timer = setTimeout(() => { try { ws.close(); } catch (e) {} resolve(-1); }, 10000);
+    const timer = setTimeout(() => { try { ws.close(); } catch (e) {} resolve(-1); }, 60000);
     ws.onopen = () => { clearTimeout(timer); conns.set(id, c); resolve(id); };
     ws.onmessage = (ev) => { c.queue.push(String(ev.data)); wake(); };
     ws.onclose = () => { clearTimeout(timer); c.closed = true; wake(); if (!conns.has(id)) resolve(-1); };
